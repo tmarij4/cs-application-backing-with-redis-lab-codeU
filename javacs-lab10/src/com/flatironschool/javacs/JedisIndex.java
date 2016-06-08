@@ -60,6 +60,10 @@ public class JedisIndex {
 		return jedis.exists(redisKey);
 	}
 	
+    
+    public void add(String term, TermCounter hash){
+        jedis.sadd(urlSetKey(term), hash.getLabel());
+    }
 	/**
 	 * Looks up a search term and returns a set of URLs.
 	 * 
@@ -67,8 +71,8 @@ public class JedisIndex {
 	 * @return Set of URLs.
 	 */
 	public Set<String> getURLs(String term) {
-        // FILL THIS IN!
-		return null;
+        Set<String> set = jedis.smembers(urlSetKey(term));
+		return set;
 	}
 
     /**
@@ -78,8 +82,13 @@ public class JedisIndex {
 	 * @return Map from URL to count.
 	 */
 	public Map<String, Integer> getCounts(String term) {
-        // FILL THIS IN!
-		return null;
+        Map<String,Integer> map = new HashMap<String, Integer>();
+        Set<String> urls = getURLs(term);
+        
+        for (String url: urls){
+            map.put(url,getCount(url,term));
+        }
+		return map;
 	}
 
     /**
@@ -90,8 +99,8 @@ public class JedisIndex {
 	 * @return
 	 */
 	public Integer getCount(String url, String term) {
-        // FILL THIS IN!
-		return null;
+        String keyFromURL = termCounterKey(url);
+		return new Integer(jedis.hget(keyFromURL,term));
 	}
 
 
@@ -102,7 +111,21 @@ public class JedisIndex {
 	 * @param paragraphs  Collection of elements that should be indexed.
 	 */
 	public void indexPage(String url, Elements paragraphs) {
-        // FILL THIS IN!
+        // make a TermCounter and count the terms in the paragraphs
+        TermCounter tc = new TermCounter(url);
+        tc.processElements(paragraphs);
+        
+        Transaction push = jedis.multi();
+        String hashLoc = termCounterKey(url);
+        
+        for (String term:tc.keySet()){
+            Integer count = tc.get(term);
+            push.hset(hashLoc, term, count.toString());
+            push.sadd(urlSetKey(term), url);
+        }
+        
+        List<Object> bump = push.exec();
+        
 	}
 
 	/**
@@ -123,6 +146,7 @@ public class JedisIndex {
 			}
 		}
 	}
+    
 
 	/**
 	 * Returns the set of terms that have been indexed.

@@ -8,6 +8,7 @@ import static org.hamcrest.CoreMatchers.*;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.Set;
 
 import org.jsoup.select.Elements;
 import org.junit.After;
@@ -72,4 +73,16 @@ public class JedisIndexTest {
 		assertThat(map.get(url1), is(339));
 		assertThat(map.get(url2), is(264));
 	}
+    
+    public void testGetCount(){
+        Integer count = index.getCount("https://en.wikipedia.org/wiki/Java_(programming_language)","the");
+        assertThat(count, is(339));
+    }
+    
+    public void testGetUrls(){
+        Set<String> set = getURLs("the");
+        for (String test:set){
+            System.out.println(test);
+        }
+    }
 }
